@@ -8518,11 +8518,29 @@ addOtherSubscribe() {
 # clashMeta配置文件
 clashMetaConfig() {
     local id=$2
+    if [[ ! "${id}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        echoContent red " ---> clashMeta配置标识不合法，仅支持字母、数字、点、下划线和中划线"
+        return 1
+    fi
     local proxyConfigPath="/etc/v2ray-agent/subscribe/clashMeta/${id}"
+    if [[ ! -s "${proxyConfigPath}" ]]; then
+        echoContent red " ---> clashMeta代理配置不存在"
+        return 1
+    fi
+    local proxyConfig=
+    proxyConfig=$(cat "${proxyConfigPath}")
+    if ! echo "${proxyConfig}" | grep -q '^proxies:$'; then
+        echoContent red " ---> clashMeta代理配置格式不正确，必须包含proxies:开头的配置"
+        return 1
+    fi
     local proxyNames=
     proxyNames=$(awk -F '"' '/^  - name: / {print "      - \"" $2 "\""}' "${proxyConfigPath}")
+    if [[ -z "${proxyNames}" ]]; then
+        echoContent red " ---> clashMeta代理节点不存在"
+        return 1
+    fi
     cat <<EOF >"/etc/v2ray-agent/subscribe/clashMetaProfiles/${id}"
-$(cat "${proxyConfigPath}")
+${proxyConfig}
 proxy-groups:
   - name: "PROXY"
     type: select
